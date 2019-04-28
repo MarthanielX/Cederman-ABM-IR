@@ -1,12 +1,12 @@
-breed [states state]
 breed [provinces province]
-;undirected-link-breed [state-links state-link]
+breed [states state]
+;undirected-link-breed [capital-links capital-link]
 
 ; fronts and front-resources are lists with matching indices
 ; fronts is a list of states
-; front-resources is a list of ints represesenting the resources allocated to the fronts
-states-own [predator? resources fronts front-resources]; provinces]
-patches-own [capital]
+; front-resources is a list of floats represesenting the resources allocated to the fronts
+states-own [predator? resources fronts front-resources]
+; should states keep track of their wars?
 
 ;provinces-own [capital isCapital?]
 
@@ -14,17 +14,19 @@ to setup
   clear-all
   ask patches [
     set pcolor white
-    sprout-states 1 [ set color yellow set shape "circle" set size 0.25]
-    set capital [who] of turtles-on self
-
-    sprout-provinces 1 [set shape "square" set size 0.75]
-    ask one-of provinces [
-      create-link-with one-of turtles-on myself
-    ]
+    sprout-provinces 1 [set shape "square" set size 0.9]
+    sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
   ask states [
-    set label [who] of self
-    set label-color red
+    create-links-with provinces-here
+    ask link-neighbors [
+      set label [who] of myself
+      set label-color black
+    ]
+    set predator? (random-float 1 < proportion-predators)
+    ;ask states with [predator? = True] [set color red]
+    set resources (random-normal initial-resource-mean initial-resource-std-dev)
+    if (resources < 0) [set resources 0]
   ]
 end
 
@@ -33,7 +35,7 @@ to step
 end
 
 to go
-  recompute-neighbors
+  recompute-fronts
   decide-attacks
   reallocate-resources ; why is this after decide-attack
   perform-battles
@@ -42,7 +44,7 @@ to go
   ; assume harvest happens after we check for victory
 end
 
-to recompute-neighbors
+to recompute-fronts
   ; note - use neighbors 4, von neumann
 
 end
@@ -56,9 +58,14 @@ to perform-battles
 
 end
 
-; all states reallocate their resources
+; divide resources evenly between the fronts
 to reallocate-resources
-
+  ask states [
+    set front-resources []
+    repeat (length fronts) [
+      set front-resources (fput (resources / count link-neighbors) front-resources)
+    ]
+  ]
 end
 
 to check-victories
@@ -66,9 +73,12 @@ to check-victories
 end
 
 to harvest
-
+  ask states [
+   repeat (count link-neighbors) [
+     set resources (resources + random-normal harvest-mean harvest-std-dev)
+    ]
+  ]
 end
-
 
 
 
@@ -83,10 +93,10 @@ end
 
 @#$#@#$#@
 GRAPHICS-WINDOW
-265
-45
-699
-480
+271
+15
+705
+450
 -1
 -1
 42.6
@@ -110,10 +120,10 @@ ticks
 30.0
 
 SLIDER
-20
+18
+78
+191
 111
-193
-144
 proportion-predators
 proportion-predators
 0
@@ -125,25 +135,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-18
+16
+122
+189
 155
+superiority-ratio
+superiority-ratio
+1
+5
+2.0
+.5
+1
+NIL
+HORIZONTAL
+
+SLIDER
+18
+167
 191
-188
-superiority-ratio
-superiority-ratio
-1
-5
-2.0
-.5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-20
 200
-193
-233
 victory-ratio
 victory-ratio
 1
@@ -155,10 +165,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
+17
+242
+190
 275
-192
-308
 initial-resource-mean
 initial-resource-mean
 1
@@ -170,10 +180,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
+17
+285
+196
 318
-198
-351
 initial-resource-std-dev
 initial-resource-std-dev
 0
@@ -185,10 +195,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
+17
+366
+190
 399
-192
-432
 harvest-mean
 harvest-mean
 0
@@ -200,10 +210,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-18
+16
+407
+189
 440
-191
-473
 harvest-std-dev
 harvest-std-dev
 0
@@ -215,10 +225,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-23
+21
+18
+87
 51
-89
-84
 NIL
 setup
 NIL
@@ -232,10 +242,10 @@ NIL
 1
 
 BUTTON
-97
+95
+18
+158
 51
-160
-84
 NIL
 step
 NIL
@@ -249,10 +259,10 @@ NIL
 1
 
 BUTTON
-171
+169
+18
+232
 51
-234
-84
 NIL
 go
 T
