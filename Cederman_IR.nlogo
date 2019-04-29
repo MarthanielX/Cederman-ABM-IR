@@ -5,8 +5,12 @@ breed [states state]
 ; fronts and front-resources are lists with matching indices
 ; fronts is a list of states
 ; front-resources is a list of floats represesenting the resources allocated to the fronts
-states-own [predator? resources fronts front-resources]
-; should states keep track of their wars?
+states-own [predator? resources fronts front-resources wars?]
+
+; The states are going to have to keep track of whether they're in wars
+; Also, just using lists might be somewhat sketchy since we'll need to make sure
+; the indices all stay lined up even when the fronts shift / a front gets deleted
+; Should we just use the table extension? (basically lets you use dicts)
 
 ;provinces-own [capital isCapital?]
 
@@ -24,7 +28,7 @@ to setup
       set label-color black
     ]
     set predator? (random-float 1 < proportion-predators)
-    ;ask states with [predator? = True] [set color red]
+    ask states with [predator? = True] [set color red]
     set resources (random-normal initial-resource-mean initial-resource-std-dev)
     if (resources < 0) [set resources 0]
   ]
@@ -46,6 +50,7 @@ end
 
 to recompute-fronts
   ; note - use neighbors 4, von neumann
+
 
 end
 
