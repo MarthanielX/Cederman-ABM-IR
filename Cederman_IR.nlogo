@@ -14,11 +14,13 @@ fronts-own [local-resources attack? war?] ; from the perspective of the out-node
 
 to setup
   clear-all
+  ; create the provinces and states
   ask patches [
     set pcolor white
     sprout-provinces 1 [set shape "square" set size 0.9]
     sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
+  ; set up the states
   ask states [
     create-control-links-with provinces-here
     ask control-link-neighbors [
@@ -27,11 +29,22 @@ to setup
     ]
     set predator? (random-float 1 < proportion-predators)
     ask states with [predator? = True] [set color red]
-
     set resources (random-normal initial-resource-mean initial-resource-std-dev)
     if (resources < 0) [set resources 0]
   ]
-  recompute-fronts
+  ; create the initial fronts
+  ask states[
+    let neighbor-states ([one-of control-link-neighbors] of (provinces-on ([neighbors4] of one-of control-link-neighbors) ))
+    set neighbor-states (states with [member? self neighbor-states]) ; turn from a list to an agentsset
+    create-fronts-to neighbor-states [
+      set attack? false
+      set war? false
+      set local-resources 0
+
+      ;set color red
+      ;set hidden? true
+    ]
+  ]
 end
 
 to step
@@ -39,7 +52,7 @@ to step
 end
 
 to go
-  recompute-fronts
+  recompute-fronts ; do we want to do this every tick or only after a state has taken over a new province?
   decide-attacks
   reallocate-resources ; why is this after decide-attack
   perform-battles
@@ -56,7 +69,7 @@ end
 to decide-attacks
   ask states [
     let no-wars true
-    foreach ([war?] of my-out-links) [x ->
+    foreach ([war?] of my-out-fronts) [x ->
       if x [
         set no-wars false
         set attack? true
@@ -67,8 +80,7 @@ to decide-attacks
       if (resources / [resources] of weakest > superiority-ratio)[ ; if exceeds superiority ratio, attack
         ask (front ([who] of myself) ([who] of weakest) ) [
           set attack? true
-          ; do we also want to set war? to true for both links?
-          ]
+        ]
       ]
     ]
    ]
@@ -77,16 +89,21 @@ end
 to perform-battles
   ask fronts [
     if attack? [
-      ask front ([who] of end2) ([who] of end1) [
+      set war? true
+      ask (front ([who] of end2) ([who] of end1)) [
+        set war? true
         set local-resources (local-resources - .05 * ([local-resources] of myself) )
         if (local-resources < 0) [set local-resources 0] ; I'm assuming you do this error checking?
+        ; CAREFUL- DO WE ALSO WANT TO CHANGE THE OVERALL RESOURCES OF THE STATE?
       ]
     ]
   ]
 end
 
 to check-victories
+  ask states [
 
+  ]
 end
 
 ; divide resources evenly between the fronts
@@ -122,11 +139,11 @@ end
 GRAPHICS-WINDOW
 271
 15
-705
-450
+719
+464
 -1
 -1
-42.6
+44.0
 1
 10
 1
