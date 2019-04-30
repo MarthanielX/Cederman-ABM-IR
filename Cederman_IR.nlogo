@@ -30,8 +30,8 @@ to setup
 
     set resources (random-normal initial-resource-mean initial-resource-std-dev)
     if (resources < 0) [set resources 0]
-
   ]
+  recompute-fronts
 end
 
 to step
@@ -75,6 +75,17 @@ to decide-attacks
 end
 
 to perform-battles
+  ask fronts [
+    if attack? [
+      ask front ([who] of end2) ([who] of end1) [
+        set local-resources (local-resources - .05 * ([local-resources] of myself) )
+        if (local-resources < 0) [set local-resources 0] ; I'm assuming you do this error checking?
+      ]
+    ]
+  ]
+end
+
+to check-victories
 
 end
 
@@ -86,10 +97,6 @@ to reallocate-resources
       set local-resources ([resources] of myself) / c
     ]
   ]
-end
-
-to check-victories
-
 end
 
 to harvest
