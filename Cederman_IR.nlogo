@@ -92,17 +92,31 @@ to perform-battles
       set war? true
       ask (front ([who] of end2) ([who] of end1)) [
         set war? true
-        set local-resources (local-resources - .05 * ([local-resources] of myself) )
+        let resources-destroyed (.05 * [local-resources] of myself)
+        set local-resources (local-resources - resources-destroyed)
         if (local-resources < 0) [set local-resources 0] ; I'm assuming you do this error checking?
+
         ; CAREFUL- DO WE ALSO WANT TO CHANGE THE OVERALL RESOURCES OF THE STATE?
+        ; ask end1 [ set resources (resources - resources-destroyed) ]
+        ; also, make sure end1 is correctly referring to the state being attacked
       ]
     ]
   ]
 end
 
 to check-victories
-  ask states [
+  ask fronts [
+    if war? [
+      let transpose (front ([who] of end2) ([who] of end1) )
+      if ([local-resources] of transpose = 0) or (local-resources / [local-resources] of transpose > victory-ratio)[
+        ; pick a province to be annexed by the winning state
 
+        ; handle the case where the annexed province was a capital
+
+        ; handle the case where losing the province makes the defeated state non-contiguous
+
+      ]
+    ]
   ]
 end
 
