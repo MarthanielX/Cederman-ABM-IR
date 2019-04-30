@@ -1,3 +1,5 @@
+extensions [table]
+
 breed [provinces province]
 breed [states state]
 ;undirected-link-breed [capital-links capital-link]
@@ -5,7 +7,10 @@ breed [states state]
 ; fronts and front-resources are lists with matching indices
 ; fronts is a list of states
 ; front-resources is a list of floats represesenting the resources allocated to the fronts
-states-own [predator? resources fronts front-resources wars?]
+
+; We keep 3 dicts mapping the who number of an adjacent state to the number of locally allocated resources,
+; whether the states are in a war, and whether the state intends to atack
+states-own [predator? resources front-resources front-war? front-attack?]
 
 ; The states are going to have to keep track of whether they're in wars
 ; Also, just using lists might be somewhat sketchy since we'll need to make sure
@@ -29,9 +34,14 @@ to setup
     ]
     set predator? (random-float 1 < proportion-predators)
     ask states with [predator? = True] [set color red]
+
     set resources (random-normal initial-resource-mean initial-resource-std-dev)
     if (resources < 0) [set resources 0]
+    set front-resources table:make
+    set front-war? table:make
+    set front-attack? table:make
   ]
+  ; Todo: get rid of the resources variable- it should just be the sum of the front-resources
 end
 
 to step
@@ -50,13 +60,22 @@ end
 
 to recompute-fronts
   ; note - use neighbors 4, von neumann
-
-
 end
 
 ; all states determine who to attack
 to decide-attacks
-
+  ask states [
+    let no-wars true
+    foreach (table:keys front-attack?)[ x ->
+      if (table:get front-war? x) [
+        table:put front-attack? x true
+        set no-wars false
+      ]
+    ]
+    if predator? and no-wars [
+      table:put front-attack? (; [who] of min-one-of ; the who-number of the neighbor with the highester superiority ratio
+    ]
+  ]
 end
 
 to perform-battles
@@ -66,10 +85,12 @@ end
 ; divide resources evenly between the fronts
 to reallocate-resources
   ask states [
-    set front-resources []
-    repeat (length fronts) [
-      set front-resources (fput (resources / count link-neighbors) front-resources)
+    foreach (table:keys front-resources)[
+      x -> table:put front-resources x (resources / table:length front-resources)
     ]
+    ;repeat (length fronts) [
+    ;  set front-resources (fput (resources / count link-neighbors) front-resources)
+    ;]
   ]
 end
 
