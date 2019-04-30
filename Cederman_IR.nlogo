@@ -1,16 +1,15 @@
-extensions [table]
 
 breed [provinces province]
 breed [states state]
 
-;undirected-link-breed [capital-links capital-link]
-undirected-link-breed [control-links control-link]
-directed-link-breed [fronts front]
+undirected-link-breed [control-links control-link] ; links a province to its state
+directed-link-breed [fronts front] ; links from a state to another
 
 states-own [predator? resources]
-fronts-own [local-resources attack? war?] ; from the perspective of the out-node
+fronts-own [local-resources attack? war?] ; from the perspective of node end1
 
-;provinces-own [capital isCapital?]
+; provinces-own [capital isCapital?]
+; Instead, just check if the state and province are on the same pspace
 
 to setup
   clear-all
@@ -20,7 +19,7 @@ to setup
     sprout-provinces 1 [set shape "square" set size 0.9]
     sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
-  ; set up the states
+  ; set up the states, links, and provinces' labels
   ask states [
     create-control-links-with provinces-here
     ask control-link-neighbors [
@@ -40,8 +39,6 @@ to setup
       set attack? false
       set war? false
       set local-resources 0
-
-      ;set color red
       ;set hidden? true
     ]
   ]
@@ -54,11 +51,11 @@ end
 to go
   recompute-fronts ; do we want to do this every tick or only after a state has taken over a new province?
   decide-attacks
-  reallocate-resources ; why is this after decide-attack
+  reallocate-resources ; its weird that this after decide-attack
   perform-battles
   check-victories
   harvest ; when does this occur / is it before check-victories?
-  ; assume harvest happens after we check for victory
+  ; assuming harvest happens after we check for victory
 end
 
 to recompute-fronts
@@ -68,6 +65,7 @@ end
 ; all states determine who to attack
 to decide-attacks
   ask states [
+    ; attack neighbors if at war with them
     let no-wars true
     ask my-out-fronts [
       if war? [
@@ -75,13 +73,12 @@ to decide-attacks
         set attack? true
       ]
     ]
+    ; if state is a predator and not in any wars, consider attacking weakest neighbor
     let original-state who
     if predator? and no-wars [
       let weakest one-of (in-front-neighbors with-min [resources]) ; finds weakest neighbor, randomly picks if there were multiple
       if (resources / [resources] of weakest > superiority-ratio)[ ; if exceeds superiority ratio, attack
-        ask (front original-state ([who] of weakest) ) [
-          set attack? true
-        ]
+        ask (front original-state ([who] of weakest) ) [set attack? true]
       ]
     ]
    ]
@@ -89,6 +86,8 @@ end
 
 to perform-battles
   ask fronts [
+    ; if a state attacks along a front, set the front and the inverse front to be at war
+    ; and deduct locally allocated resourcs from the state being attacked
     if attack? [
       set war? true
       ask (front ([who] of end2) ([who] of end1)) [
@@ -117,6 +116,7 @@ to reallocate-resources
   ]
 end
 
+; each state harvests resources for each province it controls
 to harvest
   ask states [
    repeat (count control-link-neighbors) [
@@ -124,7 +124,6 @@ to harvest
     ]
   ]
 end
-
 
 
 
