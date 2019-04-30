@@ -69,16 +69,17 @@ end
 to decide-attacks
   ask states [
     let no-wars true
-    foreach ([war?] of my-out-fronts) [x ->
-      if x [
+    ask my-out-fronts [
+      if war? [
         set no-wars false
         set attack? true
       ]
     ]
+    let original-state who
     if predator? and no-wars [
       let weakest one-of (in-front-neighbors with-min [resources]) ; finds weakest neighbor, randomly picks if there were multiple
       if (resources / [resources] of weakest > superiority-ratio)[ ; if exceeds superiority ratio, attack
-        ask (front ([who] of myself) ([who] of weakest) ) [
+        ask (front original-state ([who] of weakest) ) [
           set attack? true
         ]
       ]
@@ -109,8 +110,8 @@ end
 ; divide resources evenly between the fronts
 to reallocate-resources
   ask states [
-    let c count out-front-neighbors
-    ask out-front-neighbors [
+    let c count my-out-fronts
+    ask my-out-fronts [
       set local-resources ([resources] of myself) / c
     ]
   ]
