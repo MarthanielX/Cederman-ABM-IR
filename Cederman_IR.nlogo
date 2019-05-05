@@ -163,8 +163,8 @@ to check-victories
                       sprout-provinces 1 [set shape "square" set size 0.9 set color one-of remove red base-colors]
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
                     ]
-                    ask one-of states-on patch-here [
-                      create-control-links-with provinces-here
+                    ask (states-on patch-here) with [who != [who] of ([end2] of transpose)] [
+                      create-control-links-with (provinces-here with [])
                       ask control-link-neighbors [
                         set label [who] of myself
                         set label-color black
@@ -177,9 +177,11 @@ to check-victories
                   ]
                 ]
                 ask (states-on patch-here) with [who = [who] of ([end2] of transpose)][
+                  show self
                   die
                 ]
-                ask one-of provinces-on patch-here [
+                ask (provinces-on patch-here) with [label + 1 = [label] of myself] [
+                  show self
                   die
                 ]
               ]
