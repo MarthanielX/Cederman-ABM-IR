@@ -1,5 +1,6 @@
 breed [provinces province]
 breed [states state]
+breed [borders border]
 
 undirected-link-breed [control-links control-link] ; links a province to its state
 directed-link-breed [fronts front] ; links from a state to another
@@ -15,6 +16,7 @@ to setup
   ; create the provinces and states
   ask patches [
     set pcolor white
+;    sprout-provinces 1 [set shape "square" set color one-of remove red base-colors]
     sprout-provinces 1 [set shape "square" set size 0.9 set color one-of remove red base-colors]
     sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
@@ -46,6 +48,14 @@ to setup
     set border-provinces []
     set border-provinces lput (one-of provinces-on [patch-here] of state [who] of end1) border-provinces
   ]
+
+;  ask fronts [
+;    foreach border-provinces [
+;      z -> ask ([neighbors4] of z) [
+;        if ([label] of self )
+;      ]
+;    ]
+;  ]
   reset-ticks
 end
 
@@ -66,7 +76,41 @@ end
 
 to recompute-fronts
   ; note - use neighbors 4, von neumann
+  ask states with [count my-out-fronts = 0 and count my-control-links = 1][
+;    if (any? self with [count my-control-links = 1]) and any? self with [count my-out-fronts = 0][
+;      ask (states-on self) [
+        let neighbor-states ([one-of control-link-neighbors] of (provinces-on ([neighbors4] of one-of control-link-neighbors) ))
+        set neighbor-states (states with [member? self neighbor-states]) ; turn from a list to an agentsset
+        create-fronts-to neighbor-states [
+          set attack? false
+          set war? false
+          set local-resources 0
+          set hidden? false
+        ]
+    create-fronts-from neighbor-states [
+      set attack? false
+      set war? false
+      set local-resources 0
+      set hidden? false
+    ]
 
+;      ]
+
+;      create-fronts-to neighbor-states [
+;        set attack? false
+;        set war? false
+;        set local-resources 0
+;        ;set hidden? true
+;      ]
+;
+;      create-fronts-from neighbor-states [
+;         set attack? false
+;         set war? false
+;         set local-resources 0
+;         ;set hidden? true
+;       ]
+;    ]
+  ]
 end
 
 ; all states determine who to attack
@@ -83,10 +127,14 @@ to decide-attacks
     ; if state is a predator and not in any wars, consider attacking weakest neighbor
     let original-state who
     if predator? and no-wars [
-      let weakest one-of (in-front-neighbors with-min [resources]) ; finds weakest neighbor, randomly picks if there were multiple
-      if weakest = nobody [
-        ask my-out-fronts [set hidden? false]
+      if count fronts = 0 [
+        stop
       ]
+      let weakest one-of (in-front-neighbors with-min [resources]) ; finds weakest neighbor, randomly picks if there were multiple
+;      if weakest = nobody [
+;        ask my-out-fronts [set hidden? false]
+;        show self
+;      ]
       if (resources / [resources] of weakest > superiority-ratio)[ ; if exceeds superiority ratio, attack
         ask (front original-state ([who] of weakest) ) [set attack? true]
       ]
@@ -129,69 +177,117 @@ to check-victories
       let transpose (front ([who] of end2) ([who] of end1) )
       if ([local-resources] of transpose = 0) or (local-resources / [local-resources] of transpose > victory-ratio)[
         ask state [who] of end1 [
-;          show transpose
-;          show one-of provinces-on [patch-here] of [end2] of myself
-;          create-control-link-with one-of provinces-on [patch-here] of [end1] of transpose
-;          recompute-fronts
+
+
+          ;pick a random province on the front and an adjacent province of the state being attacked to annex
+          let transpose-front-provinces []
+          ask control-link-neighbors[
+            ask (provinces-on neighbors4) with [one-of control-link-neighbors = state [who] of ([end1] of transpose)] [
+              set transpose-front-provinces (lput self transpose-front-provinces)
+            ]
+;            if (one-of [label] of provinces-on neighbors4 = [who] of ([end1] of transpose)) [
+;              set transpose-front-provinces (lput self transpose-front-provinces)
+;            ]
+          ]
+          set transpose-front-provinces (provinces with [member? self transpose-front-provinces])
+;          ask one-of transpose-front-provinces [
+;
+;          ]
 
           ;province to get annexed
-          ask one-of provinces-on [patch-here] of [end1] of transpose [
-            create-control-link-with myself
-            ask my-control-links [
-              set hidden? true
-            ]
-            ;
-            set color [color] of one-of provinces-on [patch-here] of myself
-            set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
-
-;            if
+          ask one-of transpose-front-provinces[
+;          ask one-of provinces-on [patch-here] of [end1] of transpose [
 
             ;if the state is also on the same patch of the province that got annexed
             ifelse any? states-on patch-here [
-;              show "here"
-              if count my-control-links > 1 [
-                show self
-              ]
-;              set label [label] of provinces-on [patch-here] of [end2] of transpose
 
               ;Checks if land territory is greater than 1, if so each province becomes their own state (not including the captured province)
-              if count my-control-links > 1 [
-                ask [control-link-neighbors] of myself [
-;                  show self
+              if any? (states-on patch-here) with [count my-control-links > 1] [
+
+                ;ask the provinces controlled by the capital that was annexed
+                ask [control-link-neighbors] of one-of (states-on patch-here) [
+
+                  ;if the province is not the annexed province
                   if (self != myself) [
                     ask patch-here [
-                      sprout-provinces 1 [set shape "square" set size 0.9 set color one-of remove red base-colors]
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
                     ]
+
+                    ;set the province label and color of the newly created sovereign state
+                    ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
+                      set label [who] of states-on patch-here
+                      set color one-of remove red base-colors
+                    ]
+;                    ;kill state
+;                    ask (states-on patch-here) with [who = [who] of ([end1] of transpose)][
+;;                      show self
+;                      die
+;                    ]
                     ask (states-on patch-here) with [who != [who] of ([end2] of transpose)] [
-                      create-control-links-with (provinces-here with [])
+
+                      ;create control links from the newly created state on the province to the province
+                      create-control-links-with (provinces-here with [label != [label] of myself])
                       ask control-link-neighbors [
                         set label [who] of myself
                         set label-color black
                       ]
+
+                      ;keep with the initial predator distribution for the newly created states
                       set predator? (random-float 1 < proportion-predators)
                       ask states with [predator? = true] [set color red]
-                      set resources (random-normal initial-resource-mean initial-resource-std-dev)
-                      if (resources < 0) [set resources 0]
+
+                      ;allocate an even percentage of the resources to each new sovereign state
+                      set resources ([resources] of state [who] of ([end2] of transpose) / (count my-control-links))
                     ]
+                    recompute-fronts
                   ]
                 ]
-                ask (states-on patch-here) with [who = [who] of ([end2] of transpose)][
-                  show self
-                  die
-                ]
-                ask (provinces-on patch-here) with [label + 1 = [label] of myself] [
-                  show self
-                  die
-                ]
               ]
-;              set ([label] of myself) ([label] of provinces-on [patch-here] of [end1] of transpose)
-            ]
-            [
-              ask one-of states-on patch-here [
+
+              ;update the province that is the annexed province
+              ;i.e. change the color and label to the annexing state and kill the old state on that province
+              set color [color] of one-of provinces-on [patch-here] of myself
+              set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
+
+              ask (states-on patch-here) with [who = [who] of ([end1] of transpose)] [
                 die
               ]
+
+              ;create a control link between the annexed province and the annexing state
+              create-control-link-with myself
+              ask my-control-links [
+                set hidden? true
+              ]
             ]
+
+            ;if province does not have a state on it
+            [
+              show "here"
+              ask state (one-of [label] of provinces-on patch-here) [
+                ask control-link who ([who] of (one-of provinces-on [patch-here] of myself))[
+                  die
+                ]
+              ]
+              ;update the province that is the annexed province
+              ;i.e. change the color and label to the annexing state and kill the control link between the
+              ;state who's territory got annexed and the annexed province
+              set color [color] of one-of provinces-on [patch-here] of myself
+              set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
+
+
+              ;create a control link between the annexed province and the annexing state
+              create-control-link-with myself
+              ask my-control-links [
+                set hidden? true
+              ]
+
+              ;check if annexed province has created "enclaves"
+              ;if so then all provinces of said enclave become sovereign states
+              ask state (one-of [label] of provinces-on patch-here) [
+
+              ]
+            ]
+
 ;            show [label] of provinces-on neighbors4
             let current-label (one-of [label] of provinces-on [patch-here] of myself)
             let neighbor-provinces []
@@ -224,55 +320,9 @@ to check-victories
                  set local-resources 0
                  set hidden? true
                ]
-
-
-
-;              create-fronts-to states with [who - 1 = [label] of (([provinces-on neighbors4] of myself) with [not ([label] of provinces-on [neighbors4] of myself = [label] of provinces-on [patch-here] of [end2] of transpose)])]
-;;              create-fronts-from  ([provinces-on neighbors4] of myself) with [not ([label] of provinces-on [neighbors4] of myself = [label] of provinces-on [patch-here] of [end2] of transpose)]
-;;              create-fronts-to provinces-on neighbors4 with [not ([label] of provinces-on [patch-here] of myself = [label] of one-of provinces-on [patch-here] of [end2] of transpose) ]
-;              ask provinces-on neighbors4 with [not ([label] of provinces-on [patch-here] of myself = [label] of one-of provinces-on [patch-here] of [end2] of transpose) ] [
-;;                create-fronts-to myself
-;              ]
-;
-;              ask out-front-neighbors [
-;;                set war? false
-;;                set attack? false
-;;                set hidden? true
-;              ]
-;              ask my-out-fronts [
-;                set war? false
-;                set attack? false
-;                set hidden? true
-;              ]
             ]
-;            ask provinces-on neighbors4 with [not [color] of provinces-on [patch-here] of myself = [color] of one-of provinces-on [patch-here] of [end2] of transpose] [
-;              create-fronts-to myself
-;            ]
-
           ]
         ]
-;        ask state [who] of end1[
-;          show provinces-on patch-here
-;          show my-links
-;        ]
-;        ask control-link-neighbors with [one-of provinces-on neighbors4 with []] [
-;          ask one-of provinces-on neighbors4 with []
-;
-;        set attack? false
-;        set hidden? true
-;        ask state [who] of end1 [
-
-;          create-control-links-with provinces-on [patch-here] of state [who] of end2
-;        ]
-;        ask control-links with [ [who] of end1 =
-;        ask end2 [
-;;          ask control-link provinces-on patch-here[
-;            die
-;;          ]
-;        ]
-;        set hidden? false
-
-;        create-links
 
         ; pick a province to be annexed by the winning state
 
@@ -283,6 +333,19 @@ to check-victories
       ]
     ]
   ]
+end
+
+
+;p is the province
+to-report isContiguous [p]
+  let contiguous-provinces []
+  ask p [
+    ;DO BFS TO FIND THE CONTIGUOUS PROVINCES
+    ask ([neighbors4] of provinces-on patch-here) [
+;      while
+    ]
+  ]
+  report contiguous-provinces
 end
 
 ; divide resources evenly between the fronts
@@ -349,7 +412,7 @@ proportion-predators
 proportion-predators
 0
 1
-0.42
+0.22
 .01
 1
 NIL
