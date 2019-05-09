@@ -85,13 +85,13 @@ to recompute-fronts
           set attack? false
           set war? false
           set local-resources 0
-          set hidden? false
+          set hidden? true
         ]
     create-fronts-from neighbor-states [
       set attack? false
       set war? false
       set local-resources 0
-      set hidden? false
+      set hidden? true
     ]
 
 ;      ]
@@ -207,23 +207,18 @@ to check-victories
                 ;ask the provinces controlled by the capital that was annexed
                 ask [control-link-neighbors] of one-of (states-on patch-here) [
 
-                  ;if the province is not the annexed province
+                  ;if the province is not the annexed province, create new state and associate with province
                   if (self != myself) [
                     ask patch-here [
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
                     ]
-
                     ;set the province label and color of the newly created sovereign state
                     ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
                       set label [who] of states-on patch-here
                       set color one-of remove red base-colors
                     ]
-;                    ;kill state
-;                    ask (states-on patch-here) with [who = [who] of ([end1] of transpose)][
-;;                      show self
-;                      die
-;                    ]
-                    ask (states-on patch-here) with [who != [who] of ([end2] of transpose)] [
+
+                    ask (states-on patch-here) with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
 
                       ;create control links from the newly created state on the province to the province
                       create-control-links-with (provinces-here with [label != [label] of myself])
@@ -339,12 +334,26 @@ end
 ;p is the province
 to-report isContiguous [p]
   let contiguous-provinces []
+  let stack []
+  let seen []
   ask p [
     ;DO BFS TO FIND THE CONTIGUOUS PROVINCES
-    ask ([neighbors4] of provinces-on patch-here) [
-;      while
+    ask (provinces-on [neighbors4] of patch-here) [
+      if (label = [label] of p) [
+        set stack lput self stack
+      ]
     ]
   ]
+  while [not empty? stack][
+    let current last stack
+    set stack remove-item last stack
+    ask (pronvinces-on [neighbors4] of patch-here) [
+      if (label = [label] of p) [
+        set stack lput self stack
+      ]
+    ]
+  ]
+
   report contiguous-provinces
 end
 
@@ -366,7 +375,6 @@ to harvest
     ]
   ]
 end
-
 
 
 
