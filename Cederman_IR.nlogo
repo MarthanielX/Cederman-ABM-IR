@@ -135,7 +135,7 @@ to decide-attacks
 ;        ask my-out-fronts [set hidden? false]
 ;        show self
 ;      ]
-      if (resources / [resources] of weakest > superiority-ratio)[ ; if exceeds superiority ratio, attack
+      if (([resources] of weakest = 0) or (resources / [resources] of weakest > superiority-ratio))[ ; if exceeds superiority ratio, attack
         ask (front original-state ([who] of weakest) ) [set attack? true]
       ]
     ]
@@ -257,7 +257,7 @@ to check-victories
 
             ;if province does not have a state on it
             [
-              show "here"
+;              show "here"
               ask state (one-of [label] of provinces-on patch-here) [
                 ask control-link who ([who] of (one-of provinces-on [patch-here] of myself))[
                   die
@@ -279,7 +279,37 @@ to check-victories
               ;check if annexed province has created "enclaves"
               ;if so then all provinces of said enclave become sovereign states
               ask state (one-of [label] of provinces-on patch-here) [
+                show "here"
+                ask control-link-neighbors [
+                  if (not member? self contiguousProvinces myself) [
+                    ask patch-here [
+                      sprout-states 1 [set color black set shape "circle" set size 0.25]
+                    ]
+                    ;set the province label and color of the newly created sovereign state
+                    ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
+                      set label [who] of states-on patch-here
+                      set color one-of remove red base-colors
+                    ]
 
+                    ask (states-on patch-here) [ ;with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
+
+                      ;create control links from the newly created state on the province to the province
+                      create-control-links-with (provinces-here with [label != [label] of myself])
+                      ask control-link-neighbors [
+                        set label [who] of myself
+                        set label-color black
+                      ]
+
+                      ;keep with the initial predator distribution for the newly created states
+                      set predator? (random-float 1 < proportion-predators)
+                      ask states with [predator? = true] [set color red]
+
+                      ;allocate an even percentage of the resources to each new sovereign state
+                      set resources ([resources] of state [who] of ([end2] of transpose) / (count my-control-links))
+                    ]
+                    recompute-fronts
+                  ]
+                ]
               ]
             ]
 
@@ -332,26 +362,28 @@ end
 
 
 ;p is the province
-to-report isContiguous [p]
+to-report contiguousProvinces [s]
   let contiguous-provinces []
   let stack []
   let seen []
-  ask p [
+  ask s [
     ;DO BFS TO FIND THE CONTIGUOUS PROVINCES
     ask (provinces-on [neighbors4] of patch-here) [
-      if (label = [label] of p) [
+      if (label = [label] of s) [
         set stack lput self stack
       ]
     ]
   ]
   while [not empty? stack][
     let current last stack
-    set stack remove-item last stack
-    ask (pronvinces-on [neighbors4] of patch-here) [
-      if (label = [label] of p) [
+    set stack remove-item (length stack - 1) stack
+    ask (provinces-on [neighbors4] of patch-here) [
+      if (label = [label] of s and not member? self seen and not member? self stack) [
         set stack lput self stack
+        set seen lput self seen
       ]
     ]
+    set contiguous-provinces lput current contiguous-provinces
   ]
 
   report contiguous-provinces
@@ -375,7 +407,6 @@ to harvest
     ]
   ]
 end
-
 
 
 
@@ -420,7 +451,7 @@ proportion-predators
 proportion-predators
 0
 1
-0.22
+0.33
 .01
 1
 NIL
@@ -465,7 +496,7 @@ initial-resource-mean
 initial-resource-mean
 1
 100
-50.0
+12.0
 1
 1
 NIL
@@ -480,7 +511,7 @@ initial-resource-std-dev
 initial-resource-std-dev
 0
 20
-10.0
+6.0
 1
 1
 NIL
@@ -495,7 +526,7 @@ harvest-mean
 harvest-mean
 0
 10
-2.0
+4.0
 1
 1
 NIL
@@ -510,7 +541,7 @@ harvest-std-dev
 harvest-std-dev
 0
 10
-5.0
+2.0
 1
 1
 NIL
