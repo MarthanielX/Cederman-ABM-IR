@@ -416,7 +416,6 @@ end
 
 
 
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 271
@@ -604,17 +603,35 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This is a replication of Lars-Erik Cederman's Emergent Polarity model, as described in his book Emergent Actors in World Politics. Created in the 1990s, the model sought to improve on the neorealist model of international relations, by explaining both how great powers arise and why power politics among these great powers persists (i.e. doesn't degenerate into unipolarity). 
 
 ## HOW IT WORKS
+
+The world is represented as a grid of provinces, with states controlling one or more provinces. 
 
 (what rules the agents use to create the overall behavior of the model)
 
 ## HOW TO USE IT
 
+Indepndent Variables in the Base Model: 
+
+- Proportion of Predators: the proption of states that will consider attacking a neighbor of the neighbor is weak enough
+- Defense Dominance: the ratio of predator state resources to prey state resources necessary for a predator state to launch an unprovoked attack
+- Victory Ratio: the ratio of resources for a state to win a war and annex a province from the loser
+
+- Initial Resource Distribution
+- Distribution of resources harvested from each province
+
+Additional Parameters for Extensions: 
+
+- Presence of Defensive Alliances: 
+- 
+
 (how to use the model, including a description of each of the items in the Interface tab)
 
 ## THINGS TO NOTICE
+
+Cederman cares about how many states have survived after XXX iterations. He considers the proportion of simulations that result in unipolarity (just 1 surviving state), bipolarity (2), low mulitpolarity (3-10), high mulitpolarity (11-90), and virtually no integration (91-100). He further defines power politics as bipolar and low mulitpolar outcomes. 
 
 (suggested things for the user to notice while running the model)
 
