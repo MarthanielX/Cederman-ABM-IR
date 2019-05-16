@@ -153,6 +153,40 @@ to perform-battles
   ]
 end
 
+to recompute-all-fronts
+  ask states [
+    let currlabel who
+    let neighbor-provinces []
+    ask control-link-neighbors [
+      ask provinces-on neighbors4 [
+        if label != currlabel [;current-label [
+          set neighbor-provinces lput self neighbor-provinces
+        ]
+      ]
+    ]
+    set neighbor-provinces (provinces with [member? self neighbor-provinces])
+    let neighbor-states ([one-of control-link-neighbors] of neighbor-provinces)
+    set neighbor-states (states with [member? self neighbor-states])
+
+    ask my-in-fronts [die]
+    ask my-out-fronts [die]
+
+    create-fronts-to neighbor-states [
+      set attack? false
+      set war? false
+      set local-resources 0
+      set hidden? true
+    ]
+
+    create-fronts-from neighbor-states [
+       set attack? false
+       set war? false
+       set local-resources 0
+       set hidden? true
+     ]
+
+  ]
+end
 
 to check-victories
   ask fronts [
@@ -189,16 +223,16 @@ to check-victories
               if any? (states-on patch-here) with [count my-control-links > 1] [
 
                 ;ask the provinces controlled by the capital that was annexed
-                ask [control-link-neighbors] of one-of (states-on patch-here) [
+                ask [control-link-neighbors] of ([end1] of transpose) [ ;one-of (states-on patch-here) [
 
-                  ;if the province is not the annexed province, create new state and associate with province
-                  if (self != myself) [
+                  ;if the province is not the annexed province, create new state and associate with province it is on
+                  ifelse (self != myself) [
                     ask patch-here [
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
                     ]
                     ;set the province label and color of the newly created sovereign state
                     ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
-                      set label [who] of states-on patch-here
+                      set label [who] of one-of (states-on patch-here)
                       set color one-of remove red base-colors
                     ]
 
@@ -218,7 +252,13 @@ to check-victories
                       ;allocate an even percentage of the resources to each new sovereign state
                       set resources ([resources] of state [who] of ([end2] of transpose) / (count my-control-links))
                     ]
+;                    recompute-all-fronts
                     recompute-fronts
+                  ]
+                  [
+                    ask my-control-links [
+                      die
+                    ]
                   ]
                 ]
               ]
@@ -228,7 +268,7 @@ to check-victories
               set color [color] of one-of provinces-on [patch-here] of myself
               set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
 
-              ask (states-on patch-here) with [who = [who] of ([end1] of transpose)] [
+              ask [end1] of transpose [ ;(states-on patch-here) with [who = [who] of ([end1] of transpose)] [
                 die
               ]
 
@@ -251,9 +291,7 @@ to check-victories
               ;update the province that is the annexed province
               ;i.e. change the color and label to the annexing state
               set color [color] of one-of provinces-on [patch-here] of myself
-;              show label
               set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
-;              show label
 
               ;create a control link between the annexed province and the annexing state
               create-control-link-with myself
@@ -274,7 +312,7 @@ to check-victories
                 ask control-link-neighbors [
                   show "reached enclave"
                   if (not (member? self (contiguous_provinces loserState))) [ ;myself) [
-                    show "enclave"
+                    show contiguous_provinces loserState
                     ask my-control-links [die]
                     ask patch-here [
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
@@ -283,6 +321,9 @@ to check-victories
 ;                    ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
                       set label [who] of states-on patch-here
                       set color one-of remove red base-colors
+;                      ask patch-here [
+;                        set pcolor [color] of self
+;                      ]
 ;                    ]
 
                     ask (states-on patch-here) [ ;with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
@@ -290,7 +331,9 @@ to check-victories
                       ;create control links from the newly created state on the province to the province
                       create-control-links-with provinces-here;(provinces-here with [label != [label] of myself])
                       ask control-link-neighbors [
+;                        show label
                         set label [who] of myself
+;                        show label
                         set label-color black
                       ]
 
@@ -301,12 +344,13 @@ to check-victories
                       ;allocate an even percentage of the resources to each new sovereign state
                       set resources ([resources] of state [who] of ([end2] of transpose) / num_enclave_provinces)
                     ]
-                    recompute-fronts
+;                    recompute-fronts
                   ]
                 ]
+                ;FIX/CHECK THIS HACK
+                recompute-all-fronts
               ]
             ]
-
             let currlabel [who] of myself
             let current-label (one-of [label] of provinces-on [patch-here] of myself)
             let neighbor-provinces []
@@ -365,7 +409,7 @@ end
 
 ;s is the state
 to-report contiguous_provinces [s]
-  let state-province (provinces-on [patch-here] of s)
+  let state-province one-of (provinces-on [patch-here] of s)
   let contiguous-provinces []
   let stack []
   let seen []
@@ -410,6 +454,7 @@ to harvest
     ]
   ]
 end
+
 
 
 
@@ -603,35 +648,17 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-This is a replication of Lars-Erik Cederman's Emergent Polarity model, as described in his book Emergent Actors in World Politics. Created in the 1990s, the model sought to improve on the neorealist model of international relations, by explaining both how great powers arise and why power politics among these great powers persists (i.e. doesn't degenerate into unipolarity). 
+(a general understanding of what the model is trying to show or explain)
 
 ## HOW IT WORKS
-
-The world is represented as a grid of provinces, with states controlling one or more provinces. 
 
 (what rules the agents use to create the overall behavior of the model)
 
 ## HOW TO USE IT
 
-Indepndent Variables in the Base Model: 
-
-- Proportion of Predators: the proption of states that will consider attacking a neighbor of the neighbor is weak enough
-- Defense Dominance: the ratio of predator state resources to prey state resources necessary for a predator state to launch an unprovoked attack
-- Victory Ratio: the ratio of resources for a state to win a war and annex a province from the loser
-
-- Initial Resource Distribution
-- Distribution of resources harvested from each province
-
-Additional Parameters for Extensions: 
-
-- Presence of Defensive Alliances: 
-- 
-
 (how to use the model, including a description of each of the items in the Interface tab)
 
 ## THINGS TO NOTICE
-
-Cederman cares about how many states have survived after XXX iterations. He considers the proportion of simulations that result in unipolarity (just 1 surviving state), bipolarity (2), low mulitpolarity (3-10), high mulitpolarity (11-90), and virtually no integration (91-100). He further defines power politics as bipolar and low mulitpolar outcomes. 
 
 (suggested things for the user to notice while running the model)
 
