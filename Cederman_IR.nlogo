@@ -93,23 +93,6 @@ to recompute-fronts
       set local-resources 0
       set hidden? true
     ]
-
-;      ]
-
-;      create-fronts-to neighbor-states [
-;        set attack? false
-;        set war? false
-;        set local-resources 0
-;        ;set hidden? true
-;      ]
-;
-;      create-fronts-from neighbor-states [
-;         set attack? false
-;         set war? false
-;         set local-resources 0
-;         ;set hidden? true
-;       ]
-;    ]
   ]
 end
 
@@ -201,7 +184,7 @@ to check-victories
 
             ;if the state is also on the same patch of the province that got annexed
             ifelse any? states-on patch-here [
-
+              show "state on"
               ;Checks if land territory is greater than 1, if so each province becomes their own state (not including the captured province)
               if any? (states-on patch-here) with [count my-control-links > 1] [
 
@@ -259,17 +242,18 @@ to check-victories
             ;if province does not have a state on it
             [
               show "no state"
+              ;kill the control link between the annexed province and its original state
               ask state (one-of [label] of provinces-on patch-here) [
                 ask control-link who ([who] of (one-of provinces-on [patch-here] of myself))[
                   die
                 ]
               ]
               ;update the province that is the annexed province
-              ;i.e. change the color and label to the annexing state and kill the control link between the
-              ;state who's territory got annexed and the annexed province
+              ;i.e. change the color and label to the annexing state
               set color [color] of one-of provinces-on [patch-here] of myself
+;              show label
               set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
-
+;              show label
 
               ;create a control link between the annexed province and the annexing state
               create-control-link-with myself
@@ -279,15 +263,18 @@ to check-victories
 
               ;check if annexed province has created "enclaves"
               ;if so then all provinces of said enclave become sovereign states
-              ask state (one-of [label] of provinces-on patch-here) [
+;              ask state (one-of [label] of provinces-on patch-here) [
+              ask [end1] of transpose [
                 let loserState self
                 let num_enclave_provinces 0
-                ask control-link-neighbors with [(not (member? self (contiguousProvinces loserState)))] [
-                  show "enclave"
+                ask control-link-neighbors with [(not (member? self (contiguous_provinces loserState)))] [
                   set num_enclave_provinces num_enclave_provinces + 1
+;                  show num_enclave_provinces
                 ]
                 ask control-link-neighbors [
-                  if (not (member? self (contiguousProvinces loserState))) [;myself) [
+                  show "reached enclave"
+                  if (not (member? self (contiguous_provinces loserState))) [ ;myself) [
+                    show "enclave"
                     ask my-control-links [die]
                     ask patch-here [
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
@@ -312,7 +299,7 @@ to check-victories
                       ask states with [predator? = true] [set color red]
 
                       ;allocate an even percentage of the resources to each new sovereign state
-                      set resources ([resources] of state [who] of ([end2] of transpose) / num_enclave_provinces);(count my-control-links))
+                      set resources ([resources] of state [who] of ([end2] of transpose) / num_enclave_provinces)
                     ]
                     recompute-fronts
                   ]
@@ -328,7 +315,7 @@ to check-victories
             ask myself [
               ask control-link-neighbors [
                 ask provinces-on neighbors4 [
-                  if label != currlabel[;current-label [
+                  if label != currlabel [;current-label [
                     set neighbor-provinces lput self neighbor-provinces
                   ]
                 ]
@@ -341,9 +328,10 @@ to check-victories
 ;                set neighbor-provinces lput self neighbor-provinces
 ;              ]
 ;            ]
-
+;            show neighbor-provinces
             set neighbor-provinces (provinces with [member? self neighbor-provinces])
             let neighbor-states ([one-of control-link-neighbors] of neighbor-provinces)
+;            show neighbor-states
             set neighbor-states (states with [member? self neighbor-states])
 
 
@@ -376,7 +364,8 @@ end
 
 
 ;s is the state
-to-report contiguousProvinces [s]
+to-report contiguous_provinces [s]
+  let state-province (provinces-on [patch-here] of s)
   let contiguous-provinces []
   let stack []
   let seen []
@@ -399,6 +388,7 @@ to-report contiguousProvinces [s]
     ]
     set contiguous-provinces lput current contiguous-provinces
   ]
+  set contiguous-provinces lput state-province contiguous-provinces
   report contiguous-provinces
 end
 
