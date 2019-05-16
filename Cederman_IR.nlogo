@@ -426,7 +426,6 @@ end
 
 
 
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 271
@@ -614,9 +613,11 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This is a replication of Lars-Erik Cederman's Emergent Polarity model, as described in his book Emergent Actors in World Politics. Created in the 1990s, the model sought to improve on the neorealist model of international relations, by explaining both how great powers arise and why power politics among these great powers persists (i.e. doesn't degenerate into unipolarity). 
 
 ## HOW IT WORKS
+
+The world is represented as a grid of provinces, with states controlling one or more provinces. 
 
 (what rules the agents use to create the overall behavior of the model)
 
