@@ -20,8 +20,18 @@ to setup
     sprout-provinces 1 [set shape "square" set color one-of remove red base-colors set size 1.0]
     sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
+
+  ask provinces [
+    while [member? color ([color] of provinces-on [neighbors4] of patch-here)] [
+      set color one-of remove red base-colors
+    ]
+  ]
+
   ; set up the states, links, and provinces' labels
   ask states [
+    ask patch-here [
+      set pcolor [color] of one-of provinces-on self
+    ]
     create-control-links-with provinces-here
     ask control-link-neighbors [
       set label [who] of myself
@@ -211,14 +221,14 @@ to check-victories
 ;
 ;          ]
 
-          if one-of transpose-front-provinces = nobody [show self]
+;          if one-of transpose-front-provinces = nobody [show self]
           ;province to get annexed
           ask one-of transpose-front-provinces[
 ;          ask one-of provinces-on [patch-here] of [end1] of transpose [
 
             ;if the state is also on the same patch of the province that got annexed
             ifelse any? states-on patch-here [
-              show "state on"
+;              show "state on"
               ;Checks if land territory is greater than 1, if so each province becomes their own state (not including the captured province)
               if any? (states-on patch-here) with [count my-control-links > 1] [
 
@@ -234,6 +244,12 @@ to check-victories
                     ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
                       set label [who] of one-of (states-on patch-here)
                       set color one-of remove red base-colors
+                      while [member? color ([color] of provinces-on [neighbors4] of patch-here)] [
+                        set color one-of remove red base-colors
+                      ]
+                      ask patch-here [
+                        set pcolor [color] of myself
+                      ]
                     ]
 
                     ask (states-on patch-here)[ ;with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
@@ -267,6 +283,9 @@ to check-victories
               ;i.e. change the color and label to the annexing state and kill the old state on that province
               set color [color] of one-of provinces-on [patch-here] of myself
               set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
+              ask patch-here [
+                set pcolor [color] of myself
+              ]
 
               ask [end1] of transpose [ ;(states-on patch-here) with [who = [who] of ([end1] of transpose)] [
                 die
@@ -281,7 +300,7 @@ to check-victories
 
             ;if province does not have a state on it
             [
-              show "no state"
+;              show "no state"
               ;kill the control link between the annexed province and its original state
               ask state (one-of [label] of provinces-on patch-here) [
                 ask control-link who ([who] of (one-of provinces-on [patch-here] of myself))[
@@ -292,6 +311,9 @@ to check-victories
               ;i.e. change the color and label to the annexing state
               set color [color] of one-of provinces-on [patch-here] of myself
               set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
+              ask patch-here [
+                set pcolor [color] of myself
+              ]
 
               ;create a control link between the annexed province and the annexing state
               create-control-link-with myself
@@ -310,21 +332,24 @@ to check-victories
 ;                  show num_enclave_provinces
                 ]
                 ask control-link-neighbors [
-                  show "reached enclave"
                   if (not (member? self (contiguous_provinces loserState))) [ ;myself) [
-                    show contiguous_provinces loserState
+;                    show [end2] of transpose
+;                    show [end1] of transpose
+;                    show contiguous_provinces loserState
                     ask my-control-links [die]
                     ask patch-here [
                       sprout-states 1 [set color black set shape "circle" set size 0.25]
                     ]
+
                     ;set the province label and color of the newly created sovereign state
-;                    ask (provinces-on patch-here) [ ;with [label + 1 = [label] of myself] [
-                      set label [who] of states-on patch-here
+                    set label [who] of states-on patch-here
+                    set color one-of remove red base-colors
+                    while [member? color ([color] of provinces-on [neighbors4] of patch-here)] [
                       set color one-of remove red base-colors
-;                      ask patch-here [
-;                        set pcolor [color] of self
-;                      ]
-;                    ]
+                    ]
+                    ask patch-here [
+                      set pcolor [color] of myself
+                    ]
 
                     ask (states-on patch-here) [ ;with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
 
@@ -347,6 +372,7 @@ to check-victories
 ;                    recompute-fronts
                   ]
                 ]
+
                 ;FIX/CHECK THIS HACK
                 recompute-all-fronts
               ]
@@ -424,7 +450,7 @@ to-report contiguous_provinces [s]
   while [not empty? stack][
     let current last stack
     set stack remove-item (length stack - 1) stack
-    ask (provinces-on [neighbors4] of patch-here) [
+    ask (provinces-on [neighbors4] of current) [
       if (label = [who] of s and (not (member? self seen)) and (not (member? self stack))) [
         set stack lput self stack
         set seen lput self seen
@@ -528,7 +554,7 @@ victory-ratio
 victory-ratio
 1
 5
-2.0
+1.0
 .5
 1
 NIL
@@ -543,7 +569,7 @@ initial-resource-mean
 initial-resource-mean
 1
 100
-12.0
+10.0
 1
 1
 NIL
@@ -573,7 +599,7 @@ harvest-mean
 harvest-mean
 0
 10
-4.0
+6.0
 1
 1
 NIL
@@ -588,7 +614,7 @@ harvest-std-dev
 harvest-std-dev
 0
 10
-2.0
+4.0
 1
 1
 NIL
