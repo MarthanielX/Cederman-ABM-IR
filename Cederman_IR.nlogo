@@ -5,8 +5,8 @@ breed [borders border]
 undirected-link-breed [control-links control-link] ; links a province to its state
 directed-link-breed [fronts front] ; links from a state to another
 
-states-own [predator? resources]
-fronts-own [local-resources border-provinces attack? war?] ; from the perspective of node end1
+states-own [predator? resources biggest-threat attacking-unprovoked?]
+fronts-own [local-resources border-provinces attack? war? trust-score decrease-trust?] ; from the perspective of node end1
 
 ; provinces-own [capital isCapital?]
 ; Instead, just check if the state and province are on the same pspace
@@ -14,6 +14,7 @@ fronts-own [local-resources border-provinces attack? war?] ; from the perspectiv
 to setup
   clear-all
   ; create the provinces and states
+;  set victory-ratio superiority-ratio
   ask patches [
     set pcolor white
 ;    sprout-provinces 1 [set shape "square" set color one-of remove red base-colors]
@@ -57,6 +58,8 @@ to setup
   ask fronts [
     set border-provinces []
     set border-provinces lput (one-of provinces-on [patch-here] of state [who] of end1) border-provinces
+    set trust-score 0
+    set decrease-trust? false
   ]
 
 ;  ask fronts [
@@ -75,6 +78,9 @@ end
 
 to go
   recompute-fronts ; do we want to do this every tick or only after a state has taken over a new province?
+  if defensive-alliances? [
+    update-trust-score
+  ]
   decide-attacks
   reallocate-resources ; its weird that this after decide-attack
   perform-battles
@@ -106,8 +112,29 @@ to recompute-fronts
   ]
 end
 
+to update-trust-score
+  ask states [
+    ask my-out-fronts [
+      ifelse decrease-trust? = true [
+        set trust-score (1 - 0.5) * trust-score + 0.5 * (-1000)
+      ]
+      [
+        set trust-score (1 - 0.01) * trust-score + 0.01 * (1000)
+      ]
+    ]
+    let biggest_threat [end2] of one-of my-out-fronts
+    ask my-out-fronts [
+      if trust-score < [trust-score] of front ([who] of myself) ([who] of biggest_threat) [
+        set biggest_threat end2
+      ]
+    ]
+    set biggest-threat [who] of biggest_threat
+  ]
+end
+
 ; all states determine who to attack
 to decide-attacks
+  let unprovoked-attacks []
   ask states [
     ; attack neighbors if at war with them
     let no-wars true
@@ -130,9 +157,28 @@ to decide-attacks
 ;      ]
       if (([resources] of weakest = 0) or (resources / [resources] of weakest > superiority-ratio))[ ; if exceeds superiority ratio, attack
         ask (front original-state ([who] of weakest) ) [set attack? true]
+        set unprovoked-attacks lput (front original-state ([who] of weakest)) unprovoked-attacks
+        ask front ([who] of weakest) original-state [
+          set decrease-trust? true
+        ]
       ]
     ]
    ]
+   if defensive-alliances? [
+      alliance-attack unprovoked-attacks
+   ]
+end
+
+to alliance-attack [attacks-list]
+  foreach attacks-list [
+    z -> if ([biggest-threat] of ([end2] of z) = [who] of ([end1] of z)) [
+      ask states with [biggest-threat = [who] of ([end1] of z)] [
+        ask my-out-fronts with [[who] of end2 = [who] of ([end1] of z)] [
+          set war? true
+        ]
+      ]
+    ]
+  ]
 end
 
 to perform-battles
@@ -154,12 +200,6 @@ to perform-battles
         ; also, make sure end1 is correctly referring to the state being attacked
       ]
     ]
-;    [
-;      set hidden? true
-;      ask (front ([who] of end2) ([who] of end1)) [
-;        set hidden? true
-;      ]
-;    ]
   ]
 end
 
@@ -194,7 +234,6 @@ to recompute-all-fronts
        set local-resources 0
        set hidden? true
      ]
-
   ]
 end
 
@@ -481,12 +520,6 @@ to harvest
   ]
 end
 
-
-
-
-
-
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 271
@@ -524,7 +557,7 @@ proportion-predators
 proportion-predators
 0
 1
-0.33
+0.81
 .01
 1
 NIL
@@ -539,7 +572,7 @@ superiority-ratio
 superiority-ratio
 1
 5
-2.0
+1.5
 .5
 1
 NIL
@@ -554,7 +587,7 @@ victory-ratio
 victory-ratio
 1
 5
-1.0
+1.5
 .5
 1
 NIL
@@ -562,14 +595,14 @@ HORIZONTAL
 
 SLIDER
 17
-242
+226
 190
-275
+259
 initial-resource-mean
 initial-resource-mean
 1
 100
-10.0
+80.0
 1
 1
 NIL
@@ -577,13 +610,28 @@ HORIZONTAL
 
 SLIDER
 17
-285
+269
 196
-318
+302
 initial-resource-std-dev
 initial-resource-std-dev
 0
 20
+16.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+18
+328
+191
+361
+harvest-mean
+harvest-mean
+0
+10
 6.0
 1
 1
@@ -592,29 +640,14 @@ HORIZONTAL
 
 SLIDER
 17
-366
+369
 190
-399
-harvest-mean
-harvest-mean
-0
-10
-6.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-16
-407
-189
-440
+402
 harvest-std-dev
 harvest-std-dev
 0
 10
-4.0
+7.0
 1
 1
 NIL
@@ -670,6 +703,17 @@ NIL
 NIL
 NIL
 1
+
+SWITCH
+17
+427
+198
+460
+defensive-alliances?
+defensive-alliances?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1016,7 +1060,52 @@ Polygon -7500403 true true 30 75 75 30 270 225 225 270
 NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
+1.0
+    org.nlogo.sdm.gui.AggregateDrawing 1
+        org.nlogo.sdm.gui.StockFigure "attributes" "attributes" 1 "FillColor" "Color" 225 225 182 220 97 60 40
+            org.nlogo.sdm.gui.WrappedStock "" "" 0
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="5000"/>
+    <metric>count states</metric>
+    <steppedValueSet variable="victory-ratio" first="1" step="0.2" last="2"/>
+    <steppedValueSet variable="initial-resource-mean" first="0" step="50" last="100"/>
+    <steppedValueSet variable="superiority-ratio" first="1" step="0.2" last="2"/>
+    <steppedValueSet variable="harvest-std-dev" first="0" step="5" last="10"/>
+    <steppedValueSet variable="harvest-mean" first="1" step="3" last="10"/>
+    <steppedValueSet variable="proportion-predators" first="0" step="0.5" last="1"/>
+    <steppedValueSet variable="initial-resource-std-dev" first="0" step="10" last="20"/>
+  </experiment>
+  <experiment name="experiment" repetitions="50" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="1000"/>
+    <metric>count states</metric>
+    <metric>count states with [count control-link-neighbors &gt; 1]</metric>
+    <metric>count states with [count control-link-neighbors &gt; 2]</metric>
+    <metric>count states with [count control-link-neighbors &gt; 5]</metric>
+    <metric>count states with [count control-link-neighbors &gt; 10]</metric>
+    <metric>count states with [count control-link-neighbors &gt; 20]</metric>
+    <metric>count states with [count control-link-neighbors &gt; 30]</metric>
+    <enumeratedValueSet variable="initial-resource-mean">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="superiority-ratio" first="2" step="0.25" last="3"/>
+    <enumeratedValueSet variable="harvest-std-dev">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="harvest-mean">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="proportion-predators" first="0.05" step="0.05" last="1"/>
+    <enumeratedValueSet variable="initial-resource-std-dev">
+      <value value="10"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
