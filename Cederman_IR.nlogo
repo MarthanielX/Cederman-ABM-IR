@@ -259,7 +259,6 @@ to check-victories
       let transpose (front ([who] of end2) ([who] of end1) )
       if ([local-resources] of transpose = 0) or (local-resources / [local-resources] of transpose > victory-ratio)[
         ask end1 [ ; end1 is the annexing state
-          ;show [end2] of transpose
           ;pick a random province on the front and an adjacent province of the state being attacked to annex
           let transpose-front-provinces []
           ask control-link-neighbors[
@@ -268,12 +267,14 @@ to check-victories
             ]
           ]
           set transpose-front-provinces (provinces with [member? self transpose-front-provinces])
+          ;show transpose-front-provinces
 
           ;province to get annexed
           ask one-of transpose-front-provinces[
             let annexing-state myself
+            let losing-state [end1] of transpose
 
-            ;if the state is also on the same patch of the province that got annexed
+            ;if capital province is province getting annexed
             ifelse any? states-on patch-here [
               ;Checks if province count is greater than 1, if so each province becomes their own state (not including the captured province)
               ;if any? (states-on patch-here) with [count my-control-links > 1] [
@@ -317,6 +318,7 @@ to check-victories
               ;create a control link between the annexed province and the annexing state
               create-control-link-with annexing-state
               ask my-control-links [ set hidden? true ]
+
               ;check if annexing the province has created "enclaves"
               ;if so then all provinces of said enclave become sovereign states
               ask [end1] of transpose [
@@ -334,6 +336,33 @@ to check-victories
                   create-new-state self transpose
                 ]
               ]
+
+              ; update fronts for the loser state
+              ; i.e., kill fronts if the states are no longer adjacent
+              ask losing-state [
+                let real-neighbor-states []
+                ask control-link-neighbors [
+                  ask provinces-on neighbors4 [
+                   set real-neighbor-states lput (one-of control-link-neighbors) real-neighbor-states
+                  ]
+                ]
+                set real-neighbor-states (states with [member? self real-neighbor-states]) ; turn from a list to an agentsset
+
+
+                ;let real-neighbor-states ([one-of control-link-neighbors] of (provinces-on ([neighbors4] of one-of control-link-neighbors) ))
+                ;set real-neighbor-states (states with [member? self real-neighbor-states]) ; turn from a list to an agentsset
+                ask out-front-neighbors with [(not member? self real-neighbor-states) and (self != losing-state)] [
+                  ;show losing-state
+                  ;show front who [who] of losing-state
+                  ask front who [who] of losing-state [die]
+                  ask front [who] of losing-state who [die]
+                  ; TODO: check will this destroy resources
+                  ; check if state should lose the local resources when it loses a war
+                ]
+
+              ]
+
+
             ]
 
             ;update fronts for the annexing state
@@ -602,7 +631,7 @@ initial-resource-mean
 initial-resource-mean
 1
 100
-50.0
+70.0
 1
 1
 NIL
