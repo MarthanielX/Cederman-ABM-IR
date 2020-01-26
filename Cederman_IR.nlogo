@@ -165,6 +165,7 @@ to decide-attacks
 ;        ask my-out-fronts [set hidden? false]
 ;        show self
 ;      ]
+
       if (([resources] of weakest = 0) or (resources / [resources] of weakest > superiority-ratio))[ ; if exceeds superiority ratio, attack
         ask (front original-state ([who] of weakest) ) [set attack? true]
         set unprovoked-attacks lput (front original-state ([who] of weakest)) unprovoked-attacks
@@ -258,7 +259,7 @@ to check-victories
       let transpose (front ([who] of end2) ([who] of end1) )
       if ([local-resources] of transpose = 0) or (local-resources / [local-resources] of transpose > victory-ratio)[
         ask end1 [ ; end1 is the annexing state
-          show [end2] of transpose
+          ;show [end2] of transpose
           ;pick a random province on the front and an adjacent province of the state being attacked to annex
           let transpose-front-provinces []
           ask control-link-neighbors[
@@ -270,19 +271,18 @@ to check-victories
 
           ;province to get annexed
           ask one-of transpose-front-provinces[
+            let annexing-state myself
 
             ;if the state is also on the same patch of the province that got annexed
             ifelse any? states-on patch-here [
-
               ;Checks if province count is greater than 1, if so each province becomes their own state (not including the captured province)
               ;if any? (states-on patch-here) with [count my-control-links > 1] [
                 ;ask the provinces controlled by the capital that was annexed
                 ask [control-link-neighbors] of ([end1] of transpose) [
-                  ;if the province is not the annexed province, create new state and associate with province it is on
-                  ifelse (self != myself)
-                  [create-new-state self transpose]
                   ; kill control-link to old capital from annexed capital province
-                  [ask my-control-links [ die ] ]
+                  ask my-control-links [ die ]
+                  ;if the province is not the annexed province, create new state and associate with province it is on
+                  if (self != myself) [create-new-state self transpose]
                 ]
               ;]
 
@@ -292,9 +292,9 @@ to check-victories
               set label one-of [label] of provinces-on [patch-here] of myself
               ask patch-here [ set pcolor [color] of myself ]
 
+
               ; kill loser state
               ask [end1] of transpose [ die ]
-
               ;create a control link between the annexed province and the annexing state
               create-control-link-with myself
               ask my-control-links [ set hidden? true ]
@@ -310,14 +310,13 @@ to check-victories
               ]
               ;update the annexed province
               ;i.e. change the color and label to the annexing state
-              set color [color] of one-of provinces-on [patch-here] of myself
-              set label one-of [label] of provinces-on [patch-here] of [end2] of transpose
+              set color [color] of one-of provinces-on [patch-here] of annexing-state
+              set label one-of [label] of provinces-on [patch-here] of annexing-state
               ask patch-here [ set pcolor [color] of myself ]
 
               ;create a control link between the annexed province and the annexing state
-              create-control-link-with myself
+              create-control-link-with annexing-state
               ask my-control-links [ set hidden? true ]
-
               ;check if annexing the province has created "enclaves"
               ;if so then all provinces of said enclave become sovereign states
               ask [end1] of transpose [
@@ -338,14 +337,16 @@ to check-victories
             ]
 
             ;update fronts for the annexing state
-            let annexing-state one-of [control-link-neighbors] of self
-            ask [one-of [control-link-neighbors] of provinces-on neighbors4] of patch-here [ ; ask new neighbor states
-              if (not member? annexing-state [front-neighbors] of self) and (self != annexing-state) [
+            let new-neighbor-states [[one-of control-link-neighbors] of provinces-on neighbors4] of patch-here
+            set new-neighbor-states (states with [member? self new-neighbor-states])
+            ask new-neighbor-states [ ; ask new neighbor states
+
+              if (self != annexing-state) and (not member? annexing-state front-neighbors)  [
                 create-front-to annexing-state[
                   set attack? false
                   set war? false
                   set local-resources 0
-                  set hidden? false
+                  set hidden? true
                 ]
                 ask annexing-state[
                   create-front-to myself[
