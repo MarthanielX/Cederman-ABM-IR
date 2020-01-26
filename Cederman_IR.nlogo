@@ -321,12 +321,10 @@ to check-victories
 
               ;check if annexing the province has created "enclaves"
               ;if so then all provinces of said enclave become sovereign states
-              ask [end1] of transpose [
-                let loser-state self
-                let num_enclave_provinces 0
+              ask losing-state [
                 let enclave-provinces []
-                ask control-link-neighbors with [(not (member? self (contiguous_provinces loser-state)))] [
-                  set num_enclave_provinces num_enclave_provinces + 1
+                let contiguous-provinces (find-contiguous-provinces losing-state)
+                ask control-link-neighbors with [(not (member? self contiguous-provinces))] [
                   set enclave-provinces lput self enclave-provinces
                 ]
                 set enclave-provinces (provinces with [member? self enclave-provinces])
@@ -390,7 +388,7 @@ end
 
 
 ;s is the state
-to-report contiguous_provinces [s]
+to-report find-contiguous-provinces [s]
   let state-province one-of (provinces-on [patch-here] of s)
   let contiguous-provinces []
   let stack []
