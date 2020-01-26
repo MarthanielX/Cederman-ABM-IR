@@ -347,10 +347,6 @@ to check-victories
                   ]
                 ]
                 set real-neighbor-states (states with [member? self real-neighbor-states]) ; turn from a list to an agentsset
-
-
-                ;let real-neighbor-states ([one-of control-link-neighbors] of (provinces-on ([neighbors4] of one-of control-link-neighbors) ))
-                ;set real-neighbor-states (states with [member? self real-neighbor-states]) ; turn from a list to an agentsset
                 ask out-front-neighbors with [(not member? self real-neighbor-states) and (self != losing-state)] [
                   ;show losing-state
                   ;show front who [who] of losing-state
@@ -359,10 +355,7 @@ to check-victories
                   ; TODO: check will this destroy resources
                   ; check if state should lose the local resources when it loses a war
                 ]
-
               ]
-
-
             ]
 
             ;update fronts for the annexing state
@@ -387,54 +380,6 @@ to check-victories
                 ]
               ]
             ]
-
-;            let currlabel [who] of myself
-;            ;let current-label (one-of [label] of provinces-on [patch-here] of myself)
-;            let neighbor-provinces []
-;
-;            ;find neighbor provinces (not under fielty to the same state) of all provinces in the state
-;            ask myself [
-;              ask control-link-neighbors [
-;                ask provinces-on neighbors4 [
-;                  if label != currlabel [;current-label [
-;                    set neighbor-provinces lput self neighbor-provinces
-;                  ]
-;                ]
-;              ]
-;            ]
-;
-;            ;find neighbor provinces of the province annexed
-;;            ask provinces-on neighbors4 [
-;;              if label != current-label [
-;;                set neighbor-provinces lput self neighbor-provinces
-;;              ]
-;;            ]
-;;            show neighbor-provinces
-;            set neighbor-provinces (provinces with [member? self neighbor-provinces])
-;            let neighbor-states ([one-of control-link-neighbors] of neighbor-provinces)
-;;            show neighbor-states
-;            set neighbor-states (states with [member? self neighbor-states])
-;
-;
-;
-;            ask myself [
-;              ask my-in-fronts [die]
-;              ask my-out-fronts [die]
-;
-;              create-fronts-to neighbor-states [
-;                set attack? false
-;                set war? false
-;                set local-resources 0
-;                set hidden? true
-;              ]
-;
-;              create-fronts-from neighbor-states [
-;                 set attack? false
-;                 set war? false
-;                 set local-resources 0
-;                 set hidden? true
-;               ]
-;            ]
           ]
         ]
 
