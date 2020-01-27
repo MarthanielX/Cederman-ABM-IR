@@ -8,21 +8,16 @@ directed-link-breed [fronts front] ; links from a state to another
 states-own [predator? resources biggest-threat attacking-unprovoked?]
 fronts-own [local-resources border-provinces attack? war? trust-score decrease-trust?] ; from the perspective of node end1
 
-; provinces-own [capital isCapital?]
-; Instead, just check if the state and province are on the same pspace
-
 to setup
   clear-all
   ; create the provinces and states
-;  set victory-ratio superiority-ratio
   ask patches [
     set pcolor white
-;    sprout-provinces 1 [set shape "square" set color one-of remove red base-colors]
     sprout-provinces 1 [set shape "square" set color one-of remove red base-colors set size 1.0]
     sprout-states 1 [ set color black set shape "circle" set size 0.25]
   ]
 
-  ; make color a different color from all neighbors
+  ; make province color different from all neighbors
   ask provinces [
     while [member? color ([color] of provinces-on [neighbors4] of patch-here)] [
       set color one-of remove red base-colors
@@ -67,13 +62,6 @@ to setup
     set decrease-trust? false
   ]
 
-;  ask fronts [
-;    foreach border-provinces [
-;      z -> ask ([neighbors4] of z) [
-;        if ([label] of self )
-;      ]
-;    ]
-;  ]
   reset-ticks
 end
 
@@ -82,7 +70,7 @@ to step
 end
 
 to go
-  recompute-fronts ; do we want to do this every tick or only after a state has taken over a new province?
+  ;recompute-fronts ; do we want to do this every tick or only after a state has taken over a new province?
   if defensive-alliances? [
     update-trust-score
   ]
@@ -93,7 +81,8 @@ to go
   harvest ; when does this occur / is it before check-victories?
   ask fronts with [war?] [
     set color red
-    set hidden? false]
+    set hidden? false
+  ]
   tick
   ; assuming harvest happens after we check for victory
 end
@@ -102,8 +91,6 @@ to recompute-fronts
   ; note - use neighbors 4, von neumann
   ; creates fronts for new states
   ask states with [count my-out-fronts = 0 and count my-control-links = 1][
-;    if (any? self with [count my-control-links = 1]) and any? self with [count my-out-fronts = 0][
-;      ask (states-on self) [
         let neighbor-states ([one-of control-link-neighbors] of (provinces-on ([neighbors4] of one-of control-link-neighbors) ))
         set neighbor-states (states with [member? self neighbor-states]) ; turn from a list to an agentsset
         create-fronts-to neighbor-states [
@@ -120,7 +107,6 @@ to recompute-fronts
     ]
   ]
 end
-
 
 
 to update-trust-score
@@ -159,12 +145,7 @@ to decide-attacks
     let original-state who
     if predator? and no-wars [
       if count fronts = 0 [ stop ] ; should never happen
-      ; why in-front-neighbors vs front-neighbors
       let weakest one-of (front-neighbors with-min [resources]) ; finds weakest neighbor, randomly picks if there were multiple
-;      if weakest = nobody [
-;        ask my-out-fronts [set hidden? false]
-;        show self
-;      ]
 
       if (([resources] of weakest = 0) or (resources / [resources] of weakest > superiority-ratio))[ ; if exceeds superiority ratio, attack
         ask (front original-state ([who] of weakest) ) [set attack? true]
@@ -267,7 +248,6 @@ to check-victories
             ]
           ]
           set transpose-front-provinces (provinces with [member? self transpose-front-provinces])
-          ;show transpose-front-provinces
 
           ;province to get annexed
           ask one-of transpose-front-provinces[
@@ -277,15 +257,12 @@ to check-victories
             ;if capital province is province getting annexed
             ifelse any? states-on patch-here [
               ;Checks if province count is greater than 1, if so each province becomes their own state (not including the captured province)
-              ;if any? (states-on patch-here) with [count my-control-links > 1] [
-                ;ask the provinces controlled by the capital that was annexed
-                ask [control-link-neighbors] of ([end1] of transpose) [
+                ask [control-link-neighbors] of losing-state [
                   ; kill control-link to old capital from annexed capital province
                   ask my-control-links [ die ]
                   ;if the province is not the annexed province, create new state and associate with province it is on
                   if (self != myself) [create-new-state self transpose]
                 ]
-              ;]
 
               ;update the annexed province
               ;i.e. change the color and label to the annexing state and kill the old state on that province
@@ -346,8 +323,6 @@ to check-victories
                 ]
                 set real-neighbor-states (states with [member? self real-neighbor-states]) ; turn from a list to an agentsset
                 ask out-front-neighbors with [(not member? self real-neighbor-states) and (self != losing-state)] [
-                  ;show losing-state
-                  ;show front who [who] of losing-state
                   ask front who [who] of losing-state [die]
                   ask front [who] of losing-state who [die]
                   ; TODO: check will this destroy resources
@@ -394,7 +369,7 @@ to-report find-contiguous-provinces [s]
   let stack []
   let seen []
   ask s [
-    ;DO BFS TO FIND THE CONTIGUOUS PROVINCES
+    ;Do BFS to find which provinces are still connected to capital
     ask (provinces-on [neighbors4] of patch-here) [
       if (label = [who] of s) [
         set stack lput self stack
@@ -452,8 +427,7 @@ to create-new-state [seed-province transpose-front]
       ]
     ]
 
-    ask (states-on patch-here)[ ;with [who != [who] of ([end2] of transpose)] [ ; do we need this with check?
-
+    ask (states-on patch-here)[
       ;create control links from the newly created state on the province to the province
       create-control-links-with (provinces-here with [label != [label] of myself])
       ask control-link-neighbors [
