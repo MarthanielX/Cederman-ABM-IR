@@ -52,6 +52,10 @@ to setup
       set local-resources 0
       set hidden? true
     ]
+    if defensive-alliances? [
+      set biggest-threat [who] of (one-of states-on ([neighbors4] of patch-here))
+      show biggest-threat
+    ]
   ]
 
   ask fronts [
@@ -119,13 +123,18 @@ to update-trust-score
         set trust-score (1 - 0.01) * trust-score + 0.01 * (1000)
       ]
     ]
-    let biggest_threat [end2] of one-of my-out-fronts
+
+    ; we have to maintain the temp variable because we can't update the state var biggest-threat
+    ; from within the loop (link context)
+    let biggest-threat-temp biggest-threat
     ask my-out-fronts [
-      if trust-score < [trust-score] of front ([who] of myself) ([who] of biggest_threat) [
-        set biggest_threat end2
+      ;show [who] of myself
+      ;show biggest-threat-temp
+      if trust-score < [trust-score] of (front ([who] of myself) (biggest-threat-temp)) [
+        set biggest-threat-temp [who] of end2
       ]
     ]
-    set biggest-threat [who] of biggest_threat
+    set biggest-threat biggest-threat-temp
   ]
 end
 
@@ -180,10 +189,8 @@ to perform-battles
     if attack? [
       set color red
       set war? true
-;      set hidden? false
       ask (front ([who] of end2) ([who] of end1)) [
         set war? true
-;        set hidden? false
         set local-resources (local-resources - (.05 * [local-resources] of myself))
         if (local-resources < 0) [set local-resources 0] ; I'm assuming you do this error checking?
 
@@ -193,45 +200,6 @@ to perform-battles
       ]
     ]
   ]
-end
-
-to recompute-all-fronts
-  ask states [
-    let currlabel who
-    let neighbor-provinces []
-    ask control-link-neighbors [
-      ask provinces-on neighbors4 [
-        if label != currlabel [;current-label [
-          set neighbor-provinces lput self neighbor-provinces
-        ]
-      ]
-    ]
-    set neighbor-provinces (provinces with [member? self neighbor-provinces])
-    let neighbor-states ([one-of control-link-neighbors] of neighbor-provinces)
-    set neighbor-states (states with [member? self neighbor-states])
-
-    ; Delete fronts where states are no longer neighbors
-    ask my-out-fronts with [not member? end2 neighbor-states][die]
-    ask my-in-fronts with [not member? end1 neighbor-states][die]
-
-    ; Create fronts for states that are newly neighbors
-    ask neighbor-states with [not member? self front-neighbors][
-      create-front-to myself [
-        set attack? false
-        set war? false
-        set local-resources 0
-        set hidden? true
-      ]
-    ]
-    create-fronts-from neighbor-states with [not member? self front-neighbors][
-      set attack? false
-      set war? false
-      set local-resources 0
-      set hidden? true
-    ]
-
-  ]
-
 end
 
 to check-victories
@@ -466,6 +434,43 @@ to compute-fronts [seed-state]
     ]
   ]
 end
+
+;to recompute-all-fronts
+;  ask states [
+;    let currlabel who
+;    let neighbor-provinces []
+;    ask control-link-neighbors [
+;      ask provinces-on neighbors4 [
+;        if label != currlabel [
+;          set neighbor-provinces lput self neighbor-provinces
+;        ]
+;      ]
+;    ]
+;    set neighbor-provinces (provinces with [member? self neighbor-provinces])
+;    let neighbor-states ([one-of control-link-neighbors] of neighbor-provinces)
+;    set neighbor-states (states with [member? self neighbor-states])
+;
+;    ; Delete fronts where states are no longer neighbors
+;    ask my-out-fronts with [not member? end2 neighbor-states][die]
+;    ask my-in-fronts with [not member? end1 neighbor-states][die]
+;
+;    ; Create fronts for states that are newly neighbors
+;    ask neighbor-states with [not member? self front-neighbors][
+;      create-front-to myself [
+;        set attack? false
+;        set war? false
+;        set local-resources 0
+;        set hidden? true
+;      ]
+;    ]
+;    create-fronts-from neighbor-states with [not member? self front-neighbors][
+;      set attack? false
+;      set war? false
+;      set local-resources 0
+;      set hidden? true
+;    ]
+;  ]
+;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 271
@@ -657,7 +662,7 @@ SWITCH
 460
 defensive-alliances?
 defensive-alliances?
-1
+0
 1
 -1000
 
