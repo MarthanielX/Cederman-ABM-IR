@@ -53,8 +53,8 @@ to setup
       set hidden? true
     ]
     if defensive-alliances? [
+      ; randomly pick a biggest threat to start
       set biggest-threat [who] of (one-of states-on ([neighbors4] of patch-here))
-      show biggest-threat
     ]
   ]
 
@@ -126,6 +126,9 @@ to update-trust-score
 
     ; we have to maintain the temp variable because we can't update the state var biggest-threat
     ; from within the loop (link context)
+    if (biggest-threat = 0) or (state biggest-threat = nobody) or (not member? (state biggest-threat) front-neighbors) [
+      set biggest-threat [who] of one-of front-neighbors
+    ]
     let biggest-threat-temp biggest-threat
     ask my-out-fronts [
       ;show [who] of myself
@@ -508,7 +511,7 @@ proportion-predators
 proportion-predators
 0
 1
-0.27
+0.25
 .01
 1
 NIL
@@ -665,6 +668,24 @@ defensive-alliances?
 0
 1
 -1000
+
+PLOT
+767
+51
+967
+201
+plot 1
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot max-one-of [resources] of states"
 
 @#$#@#$#@
 ## WHAT IS IT?
