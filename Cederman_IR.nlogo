@@ -83,12 +83,12 @@ to go
   perform-battles
   check-victories
   harvest ; when does this occur / is it before check-victories?
+  ; assuming harvest happens after we check for victory, per Cederman model
   ask fronts with [war?] [
     set color red
     set hidden? false
   ]
   tick
-  ; assuming harvest happens after we check for victory
 end
 
 to recompute-fronts
@@ -190,7 +190,7 @@ to perform-battles
     ; if a state attacks along a front, set the front and the inverse front to be at war
     ; and deduct locally allocated resourcs from the state being attacked
     if attack? [
-      set color red
+      if (show-battles)[ set color red ]
       set war? true
       ask (front ([who] of end2) ([who] of end1)) [
         set war? true
@@ -438,6 +438,28 @@ to compute-fronts [seed-state]
   ]
 end
 
+to plot-top-states
+  clear-plot
+  set-plot-x-range 1 3
+  set-plot-y-range 0 1
+  set-current-plot-pen "pen-0"
+
+  let max-resources ([resources] of max-one-of states [resources])
+
+  let frontrunners (max-n-of 6 states [resources])
+
+  while [any? frontrunners][
+  ask one-of frontrunners with-max [resources] [
+    repeat 100 [
+      set-plot-pen-color pcolor
+      plot resources / max-resources
+    ]
+    set frontrunners frontrunners with [self != myself]
+  ]
+  ]
+
+end
+
 ;to recompute-all-fronts
 ;  ask states [
 ;    let currlabel who
@@ -670,22 +692,33 @@ defensive-alliances?
 -1000
 
 PLOT
-767
-51
-967
-201
-plot 1
-NIL
-NIL
+728
+52
+1152
+361
+Top States by Resource Count
+top states
+resources
 0.0
-10.0
+5.0
 0.0
 10.0
 true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot max-one-of [resources] of states"
+"pen-0" 0.01 1 -16777216 true "" "plot-top-states"
+
+SWITCH
+730
+12
+857
+45
+show-battles
+show-battles
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
